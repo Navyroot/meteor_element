@@ -1,0 +1,11 @@
+/* CSS declarations go here */
+
+.el-header {
+    background-color: rgba(230, 99, 23, 0.897);
+    color: #333;
+    line-height: 60px;
+  }
+  
+  .el-aside {
+    color: #333;
+  }
