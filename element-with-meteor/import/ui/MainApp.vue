@@ -1,26 +1,33 @@
 <template>
-    <div class="app" v-loading="loading" label-width="120px">
-        <el-form :ref="form" :model="form" :rules="rules">
+    <div class="product" v-loading="loading" label-width="120px">
+      <div>
+        <el-form :ref="form" :model="form" :rules="rules" size="mini">
           <el-form-item label="Item" prop="item">
             <el-input v-model="form.item"></el-input>
+            <input type="hidden" v-model="form.id">
           </el-form-item>
           <el-form-item label="Price" prop="price">
             <el-input v-model="form.price"></el-input>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click.prevent="handleAddItem(form)" size="mini">Add</el-button>
+            <el-button type="primary" @click.prevent="handleAddItem(form)" size="mini">{{form.value}}</el-button>
           </el-form-item>
         </el-form>
-
+      </div>
+      <div>  
+        <div style="margin-bottom:10px">
+          <el-input placeholder="Please input" @keyup.native="handleSearch" v-model="search" size="mini" >
+          </el-input>
+        </div>
         <el-table
           :data="tableData"
           border
-          
+          v-loading='loadingdata'
           style="width: 100%">
           <el-table-column
             prop="item"
             label="Item"
-            width="180">
+            >
           </el-table-column>
           <el-table-column
             prop="price"
@@ -30,11 +37,12 @@
             label="Operations"
             >
             <template slot-scope="scope">
-              <el-button @click="handleRemove(scope.$index, scope.row)" type="primary" size="mini"> x </el-button>
-              <el-button type="danger" size="mini">Edit</el-button>
+              <el-button @click="handleRemove(scope.$index, scope.row)" type="primary" size="mini" icon="el-icon-delete" ></el-button>
+              <el-button type="danger" @click="handleEdit(scope.$index, scope.row)" size="mini" icon="el-icon-edit" ></el-button>
             </template>
           </el-table-column>
         </el-table>
+      </div>
     </div>
 </template>
 <script>
@@ -45,9 +53,11 @@ export default {
     return {
       form: {
         item: "",
-        price: ""
-
+        price: "",
+        id: "",
+        value: "Add"
       },
+      select: "",
       rules: {
         item: [
           { required: true, message: "Please input Item", trigger: "blur" },
@@ -63,7 +73,9 @@ export default {
         ]
       },
       tableData: [],
-      loading: false
+      loading: false,
+      search: "",
+      loadingdata: false
     };
   },
   created() {
@@ -80,14 +92,27 @@ export default {
               item: this.form.item,
               price: this.form.price
             };
-            Meteor.call("insertData", obj, (error, result) => {
-              this.$message({
-                message: "ការក្សាទុកបានជោគជ័យ!",
-                type: "success"
+            if (this.form.value == "Add") {
+              Meteor.call("insertData", obj, (error, result) => {
+                this.$message({
+                  message: "ការក្សាទុកបានជោគជ័យ!",
+                  type: "success"
+                });
+                this.clearData();
+                this.loadData();
               });
-              this.clearData();
-              this.loadData();
-            });
+            } else if (this.form.value == "Update") {
+              let id = this.form.id;
+              Meteor.call("updateData", id, obj, (error, result) => {
+                this.$message({
+                  message: "ការកែប្រែទទួលបានជោគជ័យ!",
+                  type: "success"
+                });
+                this.clearData();
+                this.loadData();
+              });
+              this.form.value = "Add";
+            }
           }, 200);
         } else {
           this.$message({
@@ -100,25 +125,44 @@ export default {
     },
     loadData() {
       Meteor.call("getAllData", (error, result) => {
-        this.tableData = result;
-        this.tableData.forEach(obj => {
-           (item = obj.item), (price = obj.price);
+        this.tableData = result
+      })
+    },
+    clearData() {
+      this.form.item = "";
+      this.form.price = "";
+    },
+    handleRemove(index, row) {
+      let id = row._id;
+      Meteor.call("removeItem", id, (error, result) => {
+        this.$message({
+          message: "លុបបានជោគជ័យ!",
+          type: "success"
         });
+        this.loadData();
       });
     },
-    clearData(){
-      this.form.item=''
-      this.form.price=''
+    handleEdit(index, row) {
+      let id = row._id;
+      this.form.id = id;
+      this.form.item = row.item;
+      this.form.price = row.price;
+      this.form.value = "Update";
     },
-    handleRemove(index,row){
-        let id = row._id;
-        Meteor.call('removeItem',id,(error,result)=>{
-          this.$message({
-            message: "លុបបានជោគជ័យ!",
-            type: "success"
+    handleSearch() {
+      
+      let item = this.search;
+      this.loadingdata = true;
+      setTimeout(() => {
+        this.loadingdata = false;
+        if (item != null ) {
+          Meteor.call("getOneItem", item, (error, result) => {
+            this.tableData = result;
           });
-          this.loadData();
-        })
+        }else{
+          loadData();
+        }
+      }, 500);
     }
   }
 };
